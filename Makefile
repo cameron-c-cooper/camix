@@ -1,5 +1,5 @@
 TARGET_ARCH 	?= aarch64
-TARGET_BOARD 	?= rpi3b
+TARGET_BOARD 	?= raspi3b
 TARGET_NAME	?= kernel8
 
 CC 	:= $(TARGET_ARCH)-elf-gcc
@@ -10,7 +10,7 @@ AS 	:= $(CC)
 ROOT_DIR:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR	:= $(ROOT_DIR)/build
 CWARNINGS 	:= -Wall
-CFLAGS		:= -ffreestanding -nostdlib -nostdinc -nostartfiles -Iinclude $(CWARNINGS)
+CFLAGS		:= -ffreestanding -nostdlib -nostdinc -nostartfiles -Iinc $(CWARNINGS)
 LDFLAGS 	:= -T $(ROOT_DIR)/boards/$(TARGET_BOARD)/linker.ld -nostdlib
 
 KERNEL_CFLAGS	:= $(CFLAGS)
@@ -20,7 +20,6 @@ KERNEL_CSRC	:= $(shell find $(KERNEL_SRCDIR) -name "*.c")
 KERNEL_SRCS	:= $(KERNEL_CSRC) $(KERNEL_ASMSRC)
 KERNEL_OBJS	:= $(patsubst $(KERNEL_SRCDIR)/%.S,$(BUILD_DIR)/$(TARGET_ARCH)/kernel/%_s.o,$(KERNEL_ASMSRC)) \
 		   $(patsubst $(KERNEL_SRCDIR)/%.c,$(BUILD_DIR)/$(TARGET_ARCH)/kernel/%_c.o,$(KERNEL_CSRC))
-
 
 ARCH_CFLAGS	:= $(CFLAGS)
 ARCH_SRCDIR	:= $(ROOT_DIR)/arch/$(TARGET_ARCH)
@@ -35,6 +34,10 @@ BOARD_ASMSRC	:= $(shell find $(BOARD_SRCDIR) -name "*.S")
 BOARD_CSRC	:= $(shell find $(BOARD_SRCDIR) -name "*.c")
 BOARD_OBJS	:= $(patsubst $(BOARD_SRCDIR)/%.S,$(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_s.o,$(BOARD_ASMSRC)) \
                    $(patsubst $(BOARD_SRCDIR)/%.c,$(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_c.o,$(BOARD_CSRC))
+
+BOARD_CFLAGS	+= -I$(BOARD_SRCDIR)/inc
+ARCH_CFLAGS	+= -I$(BOARD_SRCDIR)/inc
+KERNEL_CFLAGS	+= -I$(BOARD_SRCDIR)/inc
 
 OBJS	:= $(KERNEL_OBJS) $(ARCH_OBJS) $(BOARD_OBJS)
 
@@ -93,6 +96,9 @@ $(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_s.o: $(BOARD_SRCDIR)/%.S
 	@echo "Compiling $@ from $<..."
 	@mkdir -p $(dir $@)
 	@$(AS) $(BOARD_CFLAGS) -c $< -o $@
+
+run-board:
+	qemu-system-$(TARGET_ARCH) -M $(TARGET_BOARD) -kernel build/$(TARGET_ARCH)/$(TARGET_NAME).img -d in_asm
 
 var-display:
 	@echo $(ARCH_OBJS)

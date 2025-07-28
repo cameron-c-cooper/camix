@@ -1,0 +1,87 @@
+[
+  {
+    "arguments": [
+      "/usr/local/cross-compiler/bin/aarch64-elf-gcc",
+      "-ffreestanding",
+      "-nostdinc",
+      "-Iinc",
+      "-Wall",
+      "-I/home/cameronc/dev/camix/boards/raspi3b/inc",
+      "-c",
+      "-o",
+      "/home/cameronc/dev/camix/build/aarch64/kernel/kmain_c.o",
+      "/home/cameronc/dev/camix/kernel/kmain.c"
+    ],
+    "directory": "/home/cameronc/dev/camix",
+    "file": "/home/cameronc/dev/camix/kernel/kmain.c",
+    "output": "/home/cameronc/dev/camix/build/aarch64/kernel/kmain_c.o"
+  },
+  {
+    "arguments": [
+      "/usr/local/cross-compiler/bin/aarch64-elf-gcc",
+      "-ffreestanding",
+      "-nostdinc",
+      "-Iinc",
+      "-Wall",
+      "-I/home/cameronc/dev/camix/boards/raspi3b/inc",
+      "-c",
+      "-o",
+      "/home/cameronc/dev/camix/build/aarch64/aarch64/exception_s.o",
+      "/home/cameronc/dev/camix/arch/aarch64/exception.S"
+    ],
+    "directory": "/home/cameronc/dev/camix",
+    "file": "/home/cameronc/dev/camix/arch/aarch64/exception.S",
+    "output": "/home/cameronc/dev/camix/build/aarch64/aarch64/exception_s.o"
+  },
+  {
+    "arguments": [
+      "/usr/local/cross-compiler/bin/aarch64-elf-gcc",
+      "-ffreestanding",
+      "-nostdinc",
+      "-Iinc",
+      "-Wall",
+      "-I/home/cameronc/dev/camix/boards/raspi3b/inc",
+      "-c",
+      "-o",
+      "/home/cameronc/dev/camix/build/aarch64/aarch64/mm/page_alloc_c.o",
+      "/home/cameronc/dev/camix/arch/aarch64/mm/page_alloc.c"
+    ],
+    "directory": "/home/cameronc/dev/camix",
+    "file": "/home/cameronc/dev/camix/arch/aarch64/mm/page_alloc.c",
+    "output": "/home/cameronc/dev/camix/build/aarch64/aarch64/mm/page_alloc_c.o"
+  },
+  {
+    "arguments": [
+      "/usr/local/cross-compiler/bin/aarch64-elf-gcc",
+      "-ffreestanding",
+      "-nostdinc",
+      "-Iinc",
+      "-Wall",
+      "-I/home/cameronc/dev/camix/boards/raspi3b/inc",
+      "-c",
+      "-o",
+      "/home/cameronc/dev/camix/build/aarch64/boards/raspi3b/boot_s.o",
+      "/home/cameronc/dev/camix/boards/raspi3b/boot.S"
+    ],
+    "directory": "/home/cameronc/dev/camix",
+    "file": "/home/cameronc/dev/camix/boards/raspi3b/boot.S",
+    "output": "/home/cameronc/dev/camix/build/aarch64/boards/raspi3b/boot_s.o"
+  },
+  {
+    "arguments": [
+      "/usr/local/cross-compiler/bin/aarch64-elf-gcc",
+      "-ffreestanding",
+      "-nostdinc",
+      "-Iinc",
+      "-Wall",
+      "-I/home/cameronc/dev/camix/boards/raspi3b/inc",
+      "-c",
+      "-o",
+      "/home/cameronc/dev/camix/build/aarch64/boards/raspi3b/drivers/uart_c.o",
+      "/home/cameronc/dev/camix/boards/raspi3b/drivers/uart.c"
+    ],
+    "directory": "/home/cameronc/dev/camix",
+    "file": "/home/cameronc/dev/camix/boards/raspi3b/drivers/uart.c",
+    "output": "/home/cameronc/dev/camix/build/aarch64/boards/raspi3b/drivers/uart_c.o"
+  }
+]
