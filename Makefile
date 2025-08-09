@@ -1,105 +1,112 @@
-TARGET_ARCH 	?= aarch64
-TARGET_BOARD 	?= raspi3b
-TARGET_NAME	?= kernel8
+TARGET_ARCH := i686
 
-CC 	:= $(TARGET_ARCH)-elf-gcc
-LD 	:= $(TARGET_ARCH)-elf-ld
+ifeq ($(TARGET_ARCH), i686)
+	TARGET_NICKNAME := x86
+else
+	TARGET_NICKNAME := $(TARGET_ARCH)
+endif
+
+CC	:= $(TARGET_ARCH)-elf-gcc
+AS	:= $(TARGET_ARCH)-elf-as
+AR	:= $(TARGET_ARCH)-elf-ar
+LD	:= $(TARGET_ARCH)-elf-ld
+NM	:= $(TARGET_ARCH)-elf-nm
+SIZE	:= $(TARGET_ARCH)-elf-size
+GCOV	:= $(TARGET_ARCH)-elf-gcov
+GPROF	:= $(TARGET_ARCH)-elf-gprof
+STRIP	:= $(TARGET_ARCH)-elf-strip
 OBJCOPY := $(TARGET_ARCH)-elf-objcopy
-AS 	:= $(CC)
+OBJDUMP := $(TARGET_ARCH)-elf-objdump
+READELF := $(TARGET_ARCH)-elf-readelf
 
-ROOT_DIR:= $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-BUILD_DIR	:= $(ROOT_DIR)/build
-CWARNINGS 	:= -Wall
-CFLAGS		:= -ffreestanding -nostdlib -nostdinc -nostartfiles -Iinc $(CWARNINGS)
-LDFLAGS 	:= -T $(ROOT_DIR)/boards/$(TARGET_BOARD)/linker.ld -nostdlib
+PROJ_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 
-KERNEL_CFLAGS	:= $(CFLAGS)
-KERNEL_SRCDIR	:= $(ROOT_DIR)/kernel
-KERNEL_ASMSRC	:= $(shell find $(KERNEL_SRCDIR) -name "*.S")
-KERNEL_CSRC	:= $(shell find $(KERNEL_SRCDIR) -name "*.c")
-KERNEL_SRCS	:= $(KERNEL_CSRC) $(KERNEL_ASMSRC)
-KERNEL_OBJS	:= $(patsubst $(KERNEL_SRCDIR)/%.S,$(BUILD_DIR)/$(TARGET_ARCH)/kernel/%_s.o,$(KERNEL_ASMSRC)) \
-		   $(patsubst $(KERNEL_SRCDIR)/%.c,$(BUILD_DIR)/$(TARGET_ARCH)/kernel/%_c.o,$(KERNEL_CSRC))
+BUILD_DIR			:= $(PROJ_ROOT)/build
+KERNEL_DIR			:= $(PROJ_ROOT)/kernel
+KERNEL_BUILD_DIR	:= $(BUILD_DIR)/kernel
+ARCH_DIR			:= $(PROJ_ROOT)/arch/$(TARGET_NICKNAME)
+ARCH_BUILD_DIR		:= $(BUILD_DIR)/arch/$(TARGET_NICKNAME)
 
-ARCH_CFLAGS	:= $(CFLAGS)
-ARCH_SRCDIR	:= $(ROOT_DIR)/arch/$(TARGET_ARCH)
-ARCH_ASMSRC	:= $(shell find $(ARCH_SRCDIR) -name "*.S")
-ARCH_CSRC	:= $(shell find $(ARCH_SRCDIR) -name "*.c")
-ARCH_OBJS	:= $(patsubst $(ARCH_SRCDIR)/%.S,$(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_ARCH)/%_s.o,$(ARCH_ASMSRC)) \
-		   $(patsubst $(ARCH_SRCDIR)/%.c,$(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_ARCH)/%_c.o,$(ARCH_CSRC))
+LINKER_SCRIPT	:= $(ARCH_DIR)/boot/linker.ld
+# The Poor Man's Static Analyzer
+CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror -Waggregate-return \
+				   -Wbad-function-cast -Wcast-align -Wcast-qual \
+				   -Wdeclaration-after-statement -Wfloat-equal -Wformat=2 -Wlogical-op \
+				   -Wmissing-declarations -Wmissing-include-dirs -Wmissing-prototypes \
+				   -Wnested-externs -Wpointer-arith -Wredundant-decls -Wsequence-point \
+				   -Wshadow -Wstrict-prototypes -Wswitch -Wundef -Wunreachable-code \
+				   -Wunused-but-set-parameter -Wwrite-strings \
+				   -Wno-unused-function
 
-BOARD_CFLAGS	:= $(CFLAGS)
-BOARD_SRCDIR	:= $(ROOT_DIR)/boards/$(TARGET_BOARD)
-BOARD_ASMSRC	:= $(shell find $(BOARD_SRCDIR) -name "*.S")
-BOARD_CSRC	:= $(shell find $(BOARD_SRCDIR) -name "*.c")
-BOARD_OBJS	:= $(patsubst $(BOARD_SRCDIR)/%.S,$(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_s.o,$(BOARD_ASMSRC)) \
-                   $(patsubst $(BOARD_SRCDIR)/%.c,$(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_c.o,$(BOARD_CSRC))
+CFLAGS			:= -Iinclude -ffreestanding -std=gnu99 $(CWARNINGS)
+LDFLAGS			:= -T $(LINKER_SCRIPT) -lgcc -nostdlib -ffreestanding -static -no-pie
 
-BOARD_CFLAGS	+= -I$(BOARD_SRCDIR)/inc
-ARCH_CFLAGS	+= -I$(BOARD_SRCDIR)/inc
-KERNEL_CFLAGS	+= -I$(BOARD_SRCDIR)/inc
+KERNEL_C_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.c' \))
+KERNEL_S_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.S' \))
+KERNEL_OBJS 	:= $(patsubst $(KERNEL_DIR)/%.c,$(KERNEL_BUILD_DIR)/%_c.o,$(KERNEL_C_SRC)) \
+				   $(patsubst $(KERNEL_DIR)/%.S,$(KERNEL_BUILD_DIR)/%_s.o,$(KERNEL_S_SRC))
 
-OBJS	:= $(KERNEL_OBJS) $(ARCH_OBJS) $(BOARD_OBJS)
+ARCH_C_SRC 	:= $(shell find $(ARCH_DIR) -type f \( -name '*.c' \))
+ARCH_S_SRC 	:= $(shell find $(ARCH_DIR) -type f \( -name '*.S' \))
+ARCH_OBJS 	:= $(patsubst $(ARCH_DIR)/%.c,$(ARCH_BUILD_DIR)/%_c.o,$(ARCH_C_SRC)) \
+			   $(patsubst $(ARCH_DIR)/%.S,$(ARCH_BUILD_DIR)/%_s.o,$(ARCH_S_SRC))
 
-all: init $(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_NAME).img
+OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS)
+
+GRUB_FILE	:= $(PROJ_ROOT)/utils/booting/minimal-mb2-grub.cfg
+
+# TODO: Instead of using grub-mkrescue use grub-mkstandalone
+kernel: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
+	@echo "Generating ISO..."
+	@mkdir -p $(dir $@)
+	@grub-mkrescue -o $@.iso $(BUILD_DIR)/sysroot
+
+# kernel.elf never removed so it should actually work in base for. 
+kernel-debug: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
+	@echo "Generating ISO..."
+	@mkdir -p $(dir $@)
+	@grub-mkrescue -o $@.iso $(BUILD_DIR)/sysroot
+
+info:
+	@echo "Target Architecture:	$(TARGET_NICKNAME)"
+	@echo "C Compiler:		$(CC)"
+	@echo "Project Root:		$(PROJ_ROOT)"	
+	@echo "Build Directory:	$(BUILD_DIR)"
+	@echo "Grub Cfg:		$(GRUB_FILE)"
 	@echo
-	@echo
-	@echo "Build Completed"
 
-init:
-	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)/$(TARGET_ARCH)
-	@echo "Target ARCH:	$(TARGET_ARCH)"
-	@echo "Target Board:	$(TARGET_BOARD)"
-	@echo "Target Name:	$(TARGET_NAME)"
-	@echo "C Compiler:	$(CC)"
-	@echo "Linker:		$(LD)"
-	@echo "Build Path:	$(BUILD_DIR)"
-	@echo
-	@echo
 
-$(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_NAME).elf: $(OBJS)
-	@echo "Generating .elf file..."
-	@echo "Linking $<"
-	@$(LD) $(LDFLAGS) $^ -o $@
-
-$(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_NAME).img: $(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_NAME).elf
-	@echo "Copying $< to $@..."
-	@$(OBJCOPY) -O binary $< $@
-
-$(BUILD_DIR)/$(TARGET_ARCH)/kernel/%_c.o: $(KERNEL_SRCDIR)/%.c
-	@echo "Compiling $@ from $<..."
+$(BUILD_DIR)/sysroot/boot/grub/grub.cfg:
+	@echo "Copying over grub config..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+	@touch $@
+	@cp $(GRUB_FILE) $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
 
-$(BUILD_DIR)/$(TARGET_ARCH)/kernel/%_s.o: $(KERNEL_SRCDIR)/%.S
-	@echo "Compiling $@ from $<..."
+$(BUILD_DIR)/sysroot/boot/camix.bin: $(BUILD_DIR)/kernel.elf
 	@mkdir -p $(dir $@)
-	@$(AS) $(KERNEL_CFLAGS) -c $< -o $@
+	@$(OBJCOPY) -O binary $< $@ 
 
-$(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_ARCH)/%_c.o: $(ARCH_SRCDIR)/%.c
-	@echo "Compiling $@ from $<..."
+$(BUILD_DIR)/kernel.elf: $(OBJS)
+	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(ARCH_CFLAGS) -c $< -o $@
+	@$(CC) $(LDFLAGS) $^ -o $@ 
 
-$(BUILD_DIR)/$(TARGET_ARCH)/$(TARGET_ARCH)/%_s.o: $(ARCH_SRCDIR)/%.S
-	@echo "Compiling $@ from $<..."
+$(ARCH_BUILD_DIR)/%_c.o: $(ARCH_DIR)/%.c
+	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
-	@$(AS) $(ARCH_CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_c.o: $(BOARD_SRCDIR)/%.c
-	@echo "Compiling $@ from $<..."
+$(ARCH_BUILD_DIR)/%_s.o: $(ARCH_DIR)/%.S
+	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(BOARD_CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/$(TARGET_ARCH)/boards/$(TARGET_BOARD)/%_s.o: $(BOARD_SRCDIR)/%.S
-	@echo "Compiling $@ from $<..."
+$(KERNEL_BUILD_DIR)/%_c.o: $(KERNEL_DIR)/%.c
+	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
-	@$(AS) $(BOARD_CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-run-board:
-	qemu-system-$(TARGET_ARCH) -M $(TARGET_BOARD) -kernel build/$(TARGET_ARCH)/$(TARGET_NAME).img -d in_asm
-
-var-display:
-	@echo $(ARCH_OBJS)
-	@echo $(KERNEL_OBJS)
+$(KERNEL_BUILD_DIR)/%_s.o: $(KERNEL_DIR)/%.S
+	@echo "Compiling $@..."
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
