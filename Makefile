@@ -66,7 +66,7 @@ GRUB_FILE	:= $(PROJ_ROOT)/utils/booting/minimal-mb2-grub.cfg
 kernel: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
 	@echo "Generating ISO..."
 	@mkdir -p $(dir $@)
-	@grub-mkrescue -o $@.iso $(BUILD_DIR)/sysroot
+	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
 
 # kernel.elf never removed so it should actually work in base for. 
 kernel-debug: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
