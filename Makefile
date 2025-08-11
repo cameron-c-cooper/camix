@@ -72,7 +72,7 @@ kernel: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/
 kernel-debug: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
 	@echo "Generating ISO..."
 	@mkdir -p $(dir $@)
-	@grub-mkrescue -o $@.iso $(BUILD_DIR)/sysroot
+	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
 
 info:
 	@echo "Target Architecture:	$(TARGET_NICKNAME)"
