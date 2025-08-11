@@ -1,10 +1,12 @@
 #ifndef __CAMIX_DRIVER_UART_H
 #define __CAMIX_DRIVER_UART_H
+#include <stdint.h>
+#include <stddef.h>
 
-void uart_init(void);
-void uart_send(unsigned int c);
-char uart_getc();
-void uart_puts(char *s);
-// TODO: Implement uart_printf?
+int serial_init(void);
+void serial_write_byte(uint8_t byte);
+void serial_write(const char *s);
+void serial_write_len(const char *s, size_t n);
+void serial_printf(const char *fmt, ...);
 
 #endif

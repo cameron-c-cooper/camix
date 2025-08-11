@@ -24,6 +24,8 @@ PROJ_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 BUILD_DIR			:= $(PROJ_ROOT)/build
 KERNEL_DIR			:= $(PROJ_ROOT)/kernel
 KERNEL_BUILD_DIR	:= $(BUILD_DIR)/kernel
+DRIVERS_DIR			:= $(PROJ_ROOT)/drivers
+DRIVERS_BUILD_DIR	:= $(BUILD_DIR)/drivers
 ARCH_DIR			:= $(PROJ_ROOT)/arch/$(TARGET_NICKNAME)
 ARCH_BUILD_DIR		:= $(BUILD_DIR)/arch/$(TARGET_NICKNAME)
 
@@ -31,14 +33,14 @@ LINKER_SCRIPT	:= $(ARCH_DIR)/boot/linker.ld
 # The Poor Man's Static Analyzer
 CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror -Waggregate-return \
 				   -Wbad-function-cast -Wcast-align -Wcast-qual \
-				   -Wdeclaration-after-statement -Wfloat-equal -Wformat=2 -Wlogical-op \
+				   -Wfloat-equal -Wformat=2 -Wlogical-op \
 				   -Wmissing-declarations -Wmissing-include-dirs -Wmissing-prototypes \
 				   -Wnested-externs -Wpointer-arith -Wredundant-decls -Wsequence-point \
 				   -Wshadow -Wstrict-prototypes -Wswitch -Wundef -Wunreachable-code \
 				   -Wunused-but-set-parameter -Wwrite-strings \
 				   -Wno-unused-function
 
-CFLAGS			:= -Iinclude -ffreestanding -std=gnu99 $(CWARNINGS)
+CFLAGS			:= -Iinclude -ffreestanding -std=c99 $(CWARNINGS)
 LDFLAGS			:= -T $(LINKER_SCRIPT) -lgcc -nostdlib -ffreestanding -static -no-pie
 
 KERNEL_C_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.c' \))
@@ -46,12 +48,17 @@ KERNEL_S_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.S' \))
 KERNEL_OBJS 	:= $(patsubst $(KERNEL_DIR)/%.c,$(KERNEL_BUILD_DIR)/%_c.o,$(KERNEL_C_SRC)) \
 				   $(patsubst $(KERNEL_DIR)/%.S,$(KERNEL_BUILD_DIR)/%_s.o,$(KERNEL_S_SRC))
 
+DRIVERS_C_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.c' \))
+DRIVERS_S_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.S' \))
+DRIVERS_OBJS 	:= $(patsubst $(DRIVERS_DIR)/%.c,$(DRIVERS_BUILD_DIR)/%_c.o,$(DRIVERS_C_SRC)) \
+				   $(patsubst $(DRIVERS_DIR)/%.S,$(DRIVERS_BUILD_DIR)/%_s.o,$(DRIVERS_S_SRC))
+
 ARCH_C_SRC 	:= $(shell find $(ARCH_DIR) -type f \( -name '*.c' \))
 ARCH_S_SRC 	:= $(shell find $(ARCH_DIR) -type f \( -name '*.S' \))
 ARCH_OBJS 	:= $(patsubst $(ARCH_DIR)/%.c,$(ARCH_BUILD_DIR)/%_c.o,$(ARCH_C_SRC)) \
 			   $(patsubst $(ARCH_DIR)/%.S,$(ARCH_BUILD_DIR)/%_s.o,$(ARCH_S_SRC))
 
-OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS)
+OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS) $(DRIVERS_OBJS)
 
 GRUB_FILE	:= $(PROJ_ROOT)/utils/booting/minimal-mb2-grub.cfg
 
@@ -107,6 +114,16 @@ $(KERNEL_BUILD_DIR)/%_c.o: $(KERNEL_DIR)/%.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(KERNEL_BUILD_DIR)/%_s.o: $(KERNEL_DIR)/%.S
+	@echo "Compiling $@..."
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(DRIVERS_BUILD_DIR)/%_c.o: $(DRIVERS_DIR)/%.c
+	@echo "Compiling $@..."
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(DRIVERS_BUILD_DIR)/%_s.o: $(DRIVERS_DIR)/%.S
 	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c $< -o $@
