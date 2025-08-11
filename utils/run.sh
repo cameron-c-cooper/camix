@@ -1,3 +1,3 @@
 #!/bin/sh
-qemu -s -S ../build/camix.iso
+qemu-system-i386 -M pc -cpu qemu32 -m 256 -cdrom ./build/kernel.iso -boot d -serial stdio
 gdb

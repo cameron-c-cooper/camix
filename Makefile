@@ -22,6 +22,7 @@ READELF := $(TARGET_ARCH)-elf-readelf
 PROJ_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 
 BUILD_DIR			:= $(PROJ_ROOT)/build
+SYSROOT				:= $(BUILD_DIR)/sysroot
 KERNEL_DIR			:= $(PROJ_ROOT)/kernel
 KERNEL_BUILD_DIR	:= $(BUILD_DIR)/kernel
 DRIVERS_DIR			:= $(PROJ_ROOT)/drivers
@@ -60,43 +61,66 @@ ARCH_OBJS 	:= $(patsubst $(ARCH_DIR)/%.c,$(ARCH_BUILD_DIR)/%_c.o,$(ARCH_C_SRC)) 
 
 OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS) $(DRIVERS_OBJS)
 
-GRUB_FILE	:= $(PROJ_ROOT)/utils/booting/minimal-mb2-grub.cfg
+MIN_GRUB_FILE	:= $(PROJ_ROOT)/utils/boot/minimal-mb2-grub.cfg
+DEBUG_GRUB_FILE := $(PROJ_ROOT)/utils/boot/debug-mb2-grub.cfg
+GRUB_FILE		:= $(SYSROOT)/boot/grub/grub.cfg
 
 # TODO: Instead of using grub-mkrescue use grub-mkstandalone
-kernel: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
+kernel: info-build clean-sysroot $(SYSROOT)/boot/camix.bin min-grub-cp
 	@echo "Generating ISO..."
-	@mkdir -p $(dir $@)
 	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
 
 # kernel.elf never removed so it should actually work in base for. 
-kernel-debug: info $(BUILD_DIR)/sysroot/boot/camix.bin $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
+kernel-debug: info-debug clean-sysroot $(SYSROOT)/boot/camix.elf debug-grub-cp
 	@echo "Generating ISO..."
-	@mkdir -p $(dir $@)
+	@mkdir -p $(BUILD_DIR) 
 	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
 
-info:
+clean-sysroot:
+	@echo "Cleaning sysroot..."
+	@rm -rf $(SYSROOT)/*
+
+info-debug:
 	@echo "Target Architecture:	$(TARGET_NICKNAME)"
 	@echo "C Compiler:		$(CC)"
 	@echo "Project Root:		$(PROJ_ROOT)"	
 	@echo "Build Directory:	$(BUILD_DIR)"
-	@echo "Grub Cfg:		$(GRUB_FILE)"
+	@echo "Grub Cfg:		$(DEBUG_GRUB_FILE)"
 	@echo
 
+info-build:
+	@echo "Target Architecture:	$(TARGET_NICKNAME)"
+	@echo "C Compiler:		$(CC)"
+	@echo "Project Root:		$(PROJ_ROOT)"	
+	@echo "Build Directory:	$(BUILD_DIR)"
+	@echo "Grub Cfg:		$(MIN_GRUB_FILE)"
+	@echo
 
-$(BUILD_DIR)/sysroot/boot/grub/grub.cfg:
+min-grub-cp: $(MIN_GRUB_FILE)
 	@echo "Copying over grub config..."
 	@mkdir -p $(dir $@)
-	@touch $@
-	@cp $(GRUB_FILE) $(BUILD_DIR)/sysroot/boot/grub/grub.cfg
+	@touch $(MIN_GRUB_FILE)
+	@cp $(MIN_GRUB_FILE) $(GRUB_FILE)
 
-$(BUILD_DIR)/sysroot/boot/camix.bin: $(BUILD_DIR)/kernel.elf
+debug-grub-cp: $(DEBUG_GRUB_FILE)
+	@echo "Copying over debug grub config..."
+	@mkdir -p $(SYSROOT)/boot/grub
+	@touch $(GRUB_FILE)
+	@cp $(DEBUG_GRUB_FILE) $(GRUB_FILE)
+
+$(SYSROOT)/boot/camix.bin: $(BUILD_DIR)/kernel.elf
 	@mkdir -p $(dir $@)
 	@$(OBJCOPY) -O binary $< $@ 
 
-$(BUILD_DIR)/kernel.elf: $(OBJS)
+$(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT)
 	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(LDFLAGS) $^ -o $@ 
+	@$(CC) $(LDFLAGS) $(OBJS) -o $@ 
+
+$(SYSROOT)/boot/camix.elf: $(OBJS) $(LINKER_SCRIPT)
+	@echo "Linking object files..."
+	@mkdir -p $(dir $@)
+	@$(CC) $(LDFLAGS) $(OBJS) -o $@ 
 
 $(ARCH_BUILD_DIR)/%_c.o: $(ARCH_DIR)/%.c
 	@echo "Compiling $@..."

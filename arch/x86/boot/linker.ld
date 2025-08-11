@@ -5,7 +5,7 @@ SECTIONS {
 
 	_kernel_start = .;
 	.multiboot.header : {
-		*(.multiboot.header)
+		KEEP(*(.multiboot.header))
 	}
 
 	.multiboot.text : {
@@ -20,7 +20,7 @@ SECTIONS {
 		*(.rodata)
 	}
 	.data ALIGN(4K) : AT(ADDR(.data) - 0xc0000000) {
-		*(.rodata)
+		*(.data .data.*)
 	}
 	.bss ALIGN(4K) : AT(ADDR(.bss) - 0xc0000000) {
 		*(COMMON)
