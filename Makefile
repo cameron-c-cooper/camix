@@ -1,10 +1,6 @@
-TARGET_ARCH := i686
+PROJ_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 
-ifeq ($(TARGET_ARCH), i686)
-	TARGET_NICKNAME := x86
-else
-	TARGET_NICKNAME := $(TARGET_ARCH)
-endif
+include config.mk
 
 CC	:= $(TARGET_ARCH)-elf-gcc
 AS	:= $(TARGET_ARCH)-elf-as
@@ -19,10 +15,20 @@ OBJCOPY := $(TARGET_ARCH)-elf-objcopy
 OBJDUMP := $(TARGET_ARCH)-elf-objdump
 READELF := $(TARGET_ARCH)-elf-readelf
 
-PROJ_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
+ifeq ($(TARGET_ARCH), i686)
+	TARGET_NICKNAME := x86
+	CONFIG_FILE := $(PROJ_ROOT)/configs/x86.config
+else ifeq ($(TARGET_ARCH), x86_64)
+	TARGET_NICKNAME := x86
+	CONFIG_FILE := $(PROJ_ROOT)/configs/x86_64.config
+	ARCH_FLAGS := -mno-red-zone -mno-mmx -mno-sse -mno-sse2
+else
+	TARGET_NICKNAME := $(TARGET_ARCH)
+	CONFIG_FILE := $(PROJ_ROOT)/configs/$(TARGET_ARCH).config
+endif
 
 BUILD_DIR			:= $(PROJ_ROOT)/build
-SYSROOT				:= $(BUILD_DIR)/sysroot
+SYSROOT				:= $(PROJ_ROOT)/sysroot
 KERNEL_DIR			:= $(PROJ_ROOT)/kernel
 KERNEL_BUILD_DIR	:= $(BUILD_DIR)/kernel
 DRIVERS_DIR			:= $(PROJ_ROOT)/drivers
@@ -30,19 +36,18 @@ DRIVERS_BUILD_DIR	:= $(BUILD_DIR)/drivers
 ARCH_DIR			:= $(PROJ_ROOT)/arch/$(TARGET_NICKNAME)
 ARCH_BUILD_DIR		:= $(BUILD_DIR)/arch/$(TARGET_NICKNAME)
 
-LINKER_SCRIPT	:= $(ARCH_DIR)/boot/linker.ld
 # The Poor Man's Static Analyzer
-CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror -Waggregate-return \
-				   -Wbad-function-cast -Wcast-align -Wcast-qual \
-				   -Wfloat-equal -Wformat=2 -Wlogical-op \
-				   -Wmissing-declarations -Wmissing-include-dirs -Wmissing-prototypes \
-				   -Wnested-externs -Wpointer-arith -Wredundant-decls -Wsequence-point \
-				   -Wshadow -Wstrict-prototypes -Wswitch -Wundef -Wunreachable-code \
+CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
+				   -Waggregate-return -Wbad-function-cast -Wcast-align \
+				   -Wcast-qual -Wfloat-equal -Wformat=2 -Wlogical-op \
+				   -Wmissing-declarations -Wmissing-include-dirs \
+				   -Wmissing-prototypes -Wnested-externs -Wpointer-arith \
+				   -Wredundant-decls -Wsequence-point -Wshadow \
+				   -Wstrict-prototypes -Wswitch -Wundef -Wunreachable-code \
 				   -Wunused-but-set-parameter -Wwrite-strings \
 				   -Wno-unused-function
 
-CFLAGS			:= -Iinclude -ffreestanding -std=c99 $(CWARNINGS)
-LDFLAGS			:= -T $(LINKER_SCRIPT) -lgcc -nostdlib -ffreestanding -static -no-pie
+
 
 KERNEL_C_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.c' \))
 KERNEL_S_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.S' \))
@@ -54,24 +59,39 @@ DRIVERS_S_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.S' \))
 DRIVERS_OBJS 	:= $(patsubst $(DRIVERS_DIR)/%.c,$(DRIVERS_BUILD_DIR)/%_c.o,$(DRIVERS_C_SRC)) \
 				   $(patsubst $(DRIVERS_DIR)/%.S,$(DRIVERS_BUILD_DIR)/%_s.o,$(DRIVERS_S_SRC))
 
-ARCH_C_SRC 	:= $(shell find $(ARCH_DIR) -type f \( -name '*.c' \))
-ARCH_S_SRC 	:= $(shell find $(ARCH_DIR) -type f \( -name '*.S' \))
-ARCH_OBJS 	:= $(patsubst $(ARCH_DIR)/%.c,$(ARCH_BUILD_DIR)/%_c.o,$(ARCH_C_SRC)) \
-			   $(patsubst $(ARCH_DIR)/%.S,$(ARCH_BUILD_DIR)/%_s.o,$(ARCH_S_SRC))
+include $(ARCH_DIR)/config.mk
+
+ARCH_OBJS := $(patsubst %.o, $(ARCH_BUILD_DIR)/%.o, $(obj-y))
+ARCH_SRCS := $(foreach obj, $(obj-y), $(if $(\
+			 	wildcard $(ARCH_DIR)/$(obj:.o=.c))\
+				$(ARCH_DIR)/$(obj:.o=.c), \
+				$(ARCH_DIR)/$(obj:.o=.S)))
 
 OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS) $(DRIVERS_OBJS)
+#
+# Technically because the CPP runs over it, it should live in the build dir
+LINKER_FULL_PATH	:= $(ARCH_DIR)/$(LINKER_SCRIPT_SRC)
+LINKER_SCRIPT		:= $(patsubst $(ARCH_DIR)/%.lds.S, \
+					   $(ARCH_BUILD_DIR)/%.lds, \
+					   $(LINKER_FULL_PATH))
+
+CFLAGS			:= -Iinclude -mcmodel=kernel -ffreestanding -std=c99 -nostdlib -Wa,-64 \
+				   $(ARCH_FLAGS) $(CWARNINGS)
+LDFLAGS			:= -T $(LINKER_SCRIPT) -nostdlib -ffreestanding -static \
+				   -no-pie $(ARCH_FLAGS) -lgcc
 
 MIN_GRUB_FILE	:= $(PROJ_ROOT)/utils/boot/minimal-mb2-grub.cfg
 DEBUG_GRUB_FILE := $(PROJ_ROOT)/utils/boot/debug-mb2-grub.cfg
 GRUB_FILE		:= $(SYSROOT)/boot/grub/grub.cfg
 
 # TODO: Instead of using grub-mkrescue use grub-mkstandalone
-kernel: info-build clean-sysroot $(SYSROOT)/boot/camix.bin min-grub-cp
+kernel: info-build clean-sysroot $(SYSROOT)/boot/camix.bin $(GRUB_FILE)
 	@echo "Generating ISO..."
-	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
+	@mkdir -p $(SYSROOT)
+	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(SYSROOT)
 
 # kernel.elf never removed so it should actually work in base for. 
-kernel-debug: info-debug clean-sysroot $(SYSROOT)/boot/camix.elf debug-grub-cp
+kernel-debug: info-debug clean-sysroot $(BUILD_DIR)/kernel.elf debug-grub-cp
 	@echo "Generating ISO..."
 	@mkdir -p $(BUILD_DIR) 
 	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
@@ -82,25 +102,25 @@ clean-sysroot:
 
 info-debug:
 	@echo "Target Architecture:	$(TARGET_NICKNAME)"
-	@echo "C Compiler:		$(CC)"
+	@echo "C Compiler:			$(CC)"
 	@echo "Project Root:		$(PROJ_ROOT)"	
-	@echo "Build Directory:	$(BUILD_DIR)"
-	@echo "Grub Cfg:		$(DEBUG_GRUB_FILE)"
+	@echo "Build Directory:		$(BUILD_DIR)"
+	@echo "Grub Cfg:			$(DEBUG_GRUB_FILE)"
 	@echo
 
 info-build:
 	@echo "Target Architecture:	$(TARGET_NICKNAME)"
-	@echo "C Compiler:		$(CC)"
+	@echo "C Compiler:			$(CC)"
 	@echo "Project Root:		$(PROJ_ROOT)"	
-	@echo "Build Directory:	$(BUILD_DIR)"
-	@echo "Grub Cfg:		$(MIN_GRUB_FILE)"
+	@echo "Build Directory:		$(BUILD_DIR)"
+	@echo "Grub Cfg:			$(MIN_GRUB_FILE)"
 	@echo
 
-min-grub-cp: $(MIN_GRUB_FILE)
+$(GRUB_FILE): $(MIN_GRUB_FILE)
 	@echo "Copying over grub config..."
 	@mkdir -p $(dir $@)
 	@touch $(MIN_GRUB_FILE)
-	@cp $(MIN_GRUB_FILE) $(GRUB_FILE)
+	@cp $< $@
 
 debug-grub-cp: $(DEBUG_GRUB_FILE)
 	@echo "Copying over debug grub config..."
@@ -115,19 +135,14 @@ $(SYSROOT)/boot/camix.bin: $(BUILD_DIR)/kernel.elf
 $(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT)
 	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(LDFLAGS) $(OBJS) -o $@ 
+	$(CC) $(OBJS) $(LDFLAGS) -o $@ 
 
-$(SYSROOT)/boot/camix.elf: $(OBJS) $(LINKER_SCRIPT)
-	@echo "Linking object files..."
-	@mkdir -p $(dir $@)
-	@$(CC) $(LDFLAGS) $(OBJS) -o $@ 
-
-$(ARCH_BUILD_DIR)/%_c.o: $(ARCH_DIR)/%.c
+$(ARCH_BUILD_DIR)/%.o: $(ARCH_DIR)/%.c
 	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(ARCH_BUILD_DIR)/%_s.o: $(ARCH_DIR)/%.S
+$(ARCH_BUILD_DIR)/%.o: $(ARCH_DIR)/%.S
 	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c $< -o $@
@@ -151,3 +166,8 @@ $(DRIVERS_BUILD_DIR)/%_s.o: $(DRIVERS_DIR)/%.S
 	@echo "Compiling $@..."
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(LINKER_SCRIPT): $(LINKER_FULL_PATH)
+	@echo "Preprocessing linker script..."
+	@mkdir -p $(dir $@)
+	@$(CC) -E -P -x c -I$(PROJ_ROOT)/include $< -o $@

@@ -1,0 +1,10 @@
+#ifndef ASM_VGA_H
+#define ASM_VGA_H
+
+.equ VGA_TEXT_BUFFER_ADDR, 0xb800
+.equ COLS, 80
+.equ ROWS, 25
+.equ BYTES_PER_CHAR, 2
+.equ VGA_TEXT_BUFFER_SIZE, (BYTES_PER_CHAR * COLS * ROWS)
+
+#endif

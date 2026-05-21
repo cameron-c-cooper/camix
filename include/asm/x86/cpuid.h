@@ -1,0 +1,8 @@
+#ifndef ASM_CPUID_H
+#define ASM_CPUID_H
+
+.equ CPUID_EXTENSIONS, 0x80000000
+.equ CPUID_EXT_FEATURES, 0x80000001 
+.equ CPUID_EDX_EXT_FEAT_LM, (1 << 29)
+
+#endif
