@@ -1,14 +1,20 @@
 #ifndef ASM_MM_H
 #define ASM_MM_H
 
-.equ PML4T_ADDR,0x1000
-.equ PDPT_ADDR, 0x2000
-.equ PDT_ADDR, 	0x3000
-.equ PT_ADDR, 	0x4000
+.equ PML4T_ADDR,	0x1000
+.equ LO_PDPT_ADDR, 	0x2000
+.equ LO_PDT_ADDR, 	0x3000
+.equ LO_PT_ADDR, 	0x4000
+.equ HI_PDPT_ADDR, 	0x5000
+.equ HI_PDT_ADDR, 	0x6000
+.equ HI_PT_ADDR, 	0x7000
 
 .equ PT_ADDR_MASK, 	0xffffffffff000
 .equ PT_PRESENT,	0x01
 .equ PT_READABLE, 	0x02
+
+.equ PML4_HIGH_IDX, 0x1ff
+.equ PDPT_HIGH_IDX, 510
 
 .equ SIZEOF_PT, 		0x1000
 .equ ENTRIES_PER_PT, 	0x0200

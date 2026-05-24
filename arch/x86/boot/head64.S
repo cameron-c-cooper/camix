@@ -88,37 +88,59 @@ _start:
 	   page to a physical address. For now, we will simply use 0x1000 as the
 	   beginning of the PML4T and each level below is contigous with 4 KiB inc.
 	*/
-	mov $PML4T_ADDR, %edi ;
+	mov $PML4T_ADDR, %edi
 	mov %edi, %cr3
 	xor %eax, %eax
-	mov $(SIZEOF_PT), %ecx
+	/* 0x1c00 word is equivalent to 0x700 bytes */
+	mov $0x1c00, %ecx
 	rep stosl
 	movl %cr3, %edi
 
 	/* 
 	  Linking the first entries of each table, 2 MB doesnt go over 1 PDT entry
 	*/
-	movl $(PDPT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
-	mov $PDPT_ADDR, %edi
-	movl $(PDT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
-	mov $PDT_ADDR, %edi
-	movl $(PT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+	movl $(LO_PDPT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+	mov $LO_PDPT_ADDR, %edi
+	movl $(LO_PDT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+	mov $LO_PDT_ADDR, %edi
+	movl $(LO_PT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
 
-	mov $PT_ADDR, %edi
+	mov $LO_PT_ADDR, %edi
 	mov $(PT_PRESENT | PT_READABLE), %ebx
 	mov $ENTRIES_PER_PT, %ecx
 
 .set_entry_low:
-	# edi is at PT addr
 	mov %ebx, (%edi) 
 	add $PAGE_SIZE, %ebx
 	add $SIZEOF_PT_ENTRY, %edi
 	loop .set_entry_low
+	/* Low memory paging done */
 
+	/* kmain placed at approx 0xffffffff80105000 */
+	mov $PML4T_ADDR, %edi
+	add $(PML4_HIGH_IDX * SIZEOF_PT_ENTRY), %edi
+	/* establish new PDPT table at higher address */
+	movl $(HI_PDPT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+
+	mov $HI_PDPT_ADDR, %edi
+	add $(PDPT_HIGH_IDX * SIZEOF_PT_ENTRY), %edi
+	movl $(HI_PDT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+
+	mov $HI_PDT_ADDR, %edi
+	movl $(HI_PT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+
+	mov $HI_PT_ADDR, %edi
+	mov $(PT_PRESENT | PT_READABLE), %ebx
+	mov $ENTRIES_PER_PT, %ecx
+.set_entry_high:
+	mov %ebx, (%edi)
+	add $PAGE_SIZE, %ebx
+	add $SIZEOF_PT_ENTRY, %edi
+	loop .set_entry_high
+	
 	mov %cr4, %eax
 	or $CR4_PAE_ENABLE, %eax
 	mov %eax, %cr4
-	/* Low memory paging done */
 
 	/* TODO: Thinik about PML5 */
 
