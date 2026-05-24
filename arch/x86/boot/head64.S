@@ -26,30 +26,29 @@ stack_bottom:
 	.skip 0x4000
 stack_top:
 
-.section .boot_gdt
+.section .boot_gdt, "a"
 GDT:
-	.Null = . - GDT
-		.quad 0
-	
-	.Code = . - GDT
-		.Code_limit_lo:  .word 0xffff
-        .Code_base_lo:   .word 0
-        .Code_base_mid:  .byte 0
-        .Code_access:    .byte PRESENT | NOT_SYS | EXEC | RW
-        .Code_flags:     .byte GRAN_4K | LONG_MODE | 0xf
-        .Code_base_hi:   .byte 0
+	.quad 0
+	.word 0xffff
+	.word 0
+	.byte 0
+	.byte PRESENT | NOT_SYS | EXEC | RW
+	.byte GRAN_4K | LONG_MODE | 0xf
+	.byte 0
+	.word 0xffff
+	.word 0
+	.byte 0
+	.byte PRESENT | NOT_SYS | RW
+	.byte GRAN_4K | SZ_32 | 0xf
+	.byte 0
 
-    .Data = . - GDT
-        .Data_limit_lo:  .word 0xffff
-        .Data_base_lo:   .word 0
-        .Data_base_mid:  .byte 0
-        .Data_access:    .byte PRESENT | NOT_SYS | RW
-        .Data_flags:     .byte GRAN_4K | SZ_32 | 0xF
-        .Data_base_hi:   .byte 0
-
-    .Pointer:
+GDT_Pointer:
         .word . - GDT - 1
-        .quad GDT
+        .long GDT
+
+indirect_target:
+	.long LM_Entrance
+	.word 0x08
 	
 	.code32
 	.section .multiboot.text, "a"
@@ -70,6 +69,10 @@ _start:
 	cpuid
 	test $CPUID_EDX_EXT_FEAT_LM, %eax
 	# jz .no_lm
+
+	/* Have to setup gdt before paging due to compaitibility mode bs */
+	movl $GDT_Pointer, %eax
+	lgdt (%eax) 
 
 	/* 64 bit paging uses PAE with an extra level, so
 		PML4T	(Page Map Level 4 Table)
@@ -99,23 +102,23 @@ _start:
 	mov $PDPT_ADDR, %edi
 	movl $(PDT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
 	mov $PDT_ADDR, %edi
-	movl $(PDT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
+	movl $(PT_ADDR & PT_ADDR_MASK | PT_PRESENT | PT_READABLE), (%edi)
 
 	mov $PT_ADDR, %edi
 	mov $(PT_PRESENT | PT_READABLE), %ebx
 	mov $ENTRIES_PER_PT, %ecx
 
-.set_entry:
+.set_entry_low:
 	# edi is at PT addr
 	mov %ebx, (%edi) 
 	add $PAGE_SIZE, %ebx
 	add $SIZEOF_PT_ENTRY, %edi
-	loop .set_entry
+	loop .set_entry_low
 
 	mov %cr4, %eax
 	or $CR4_PAE_ENABLE, %eax
 	mov %eax, %cr4
-	# Paging setup should be complete
+	/* Low memory paging done */
 
 	/* TODO: Thinik about PML5 */
 
@@ -128,14 +131,13 @@ _start:
 	or $(CR0_PG_ENABLE | CR0_PM_ENABLE), %eax
 	mov %eax, %cr0
 	
-	lgdt (.Pointer)
-	ljmp $(.Code), $LM_Entrance
-	
+	ljmp *indirect_target
+
 check_cpuid:
 	pushfl
 	popl %eax
 	movl %eax, %ecx
-	xor EFLAGS_ID, %eax
+	xor $EFLAGS_ID, %eax
 
 	push %eax
 	popfl
@@ -155,9 +157,11 @@ check_cpuid:
 		mov $1, %ax
 		ret
 
+/* Still in the low section of memory */
+.section .lm_entry, "ax"
 .code64
 LM_Entrance:
-	mov $(.Data), %ax
+	mov $0x10, %ax
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
@@ -168,4 +172,16 @@ LM_Entrance:
 	mov $0, %rax
 	mov $(VGA_TEXT_BUFFER_SIZE >> 3), %rcx
 	rep stosq
+
+	mov $stack_top, %rsp
+	/* zero out the frame pointer, we need new call stack root */
+	xor %rbp, %rbp
+
+.extern kmain
+	call kmain
+
+/* just in case kernel_main magically returns */
+.hang:
+	cli
 	hlt
+	jmp .hang

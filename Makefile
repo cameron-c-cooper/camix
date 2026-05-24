@@ -41,13 +41,10 @@ CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
 				   -Waggregate-return -Wbad-function-cast -Wcast-align \
 				   -Wcast-qual -Wfloat-equal -Wformat=2 -Wlogical-op \
 				   -Wmissing-declarations -Wmissing-include-dirs \
-				   -Wmissing-prototypes -Wnested-externs -Wpointer-arith \
-				   -Wredundant-decls -Wsequence-point -Wshadow \
-				   -Wstrict-prototypes -Wswitch -Wundef -Wunreachable-code \
-				   -Wunused-but-set-parameter -Wwrite-strings \
-				   -Wno-unused-function
-
-
+				   -Wnested-externs -Wpointer-arith -Wredundant-decls \
+				   -Wsequence-point -Wshadow -Wstrict-prototypes -Wswitch \
+				   -Wundef -Wunreachable-code -Wunused-but-set-parameter \
+				   -Wwrite-strings -Wno-unused-function
 
 KERNEL_C_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.c' \))
 KERNEL_S_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.S' \))
@@ -85,7 +82,7 @@ DEBUG_GRUB_FILE := $(PROJ_ROOT)/utils/boot/debug-mb2-grub.cfg
 GRUB_FILE		:= $(SYSROOT)/boot/grub/grub.cfg
 
 # TODO: Instead of using grub-mkrescue use grub-mkstandalone
-kernel: info-build clean-sysroot $(SYSROOT)/boot/camix.bin $(GRUB_FILE)
+kernel: info-build clean-sysroot $(GRUB_FILE) $(SYSROOT)/boot/kernel.elf
 	@echo "Generating ISO..."
 	@mkdir -p $(SYSROOT)
 	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(SYSROOT)
@@ -128,14 +125,17 @@ debug-grub-cp: $(DEBUG_GRUB_FILE)
 	@touch $(GRUB_FILE)
 	@cp $(DEBUG_GRUB_FILE) $(GRUB_FILE)
 
-$(SYSROOT)/boot/camix.bin: $(BUILD_DIR)/kernel.elf
-	@mkdir -p $(dir $@)
-	@$(OBJCOPY) -O binary $< $@ 
+# $(SYSROOT)/boot/camix.bin: $(BUILD_DIR)/kernel.elf
+# 	@mkdir -p $(dir $@)
+# 	@$(OBJCOPY) -O binary $< $@ 
+
+$(SYSROOT)/boot/kernel.elf: $(BUILD_DIR)/kernel.elf
+	@cp $< $@
 
 $(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT)
 	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	$(CC) $(OBJS) $(LDFLAGS) -o $@ 
+	@$(CC) $(OBJS) $(LDFLAGS) -o $@ 
 
 $(ARCH_BUILD_DIR)/%.o: $(ARCH_DIR)/%.c
 	@echo "Compiling $@..."

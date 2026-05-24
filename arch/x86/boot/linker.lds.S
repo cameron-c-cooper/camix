@@ -19,6 +19,9 @@ SECTIONS {
 	.multiboot.text : {
 		*(.multiboot.text)
 	}
+	.lm_entry : {
+		*(.lm_entry)
+	}
 	.boot_stack : { 
 		*(.boot_stack) 
 	}
