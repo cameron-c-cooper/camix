@@ -2,6 +2,13 @@ PROJ_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 
 include config.mk
 
+DEBUG := y
+
+ifeq ($(DEBUG), y)
+	CFLAGS = -g
+	LDFLAGS = -g
+endif
+
 CC	:= $(TARGET_ARCH)-elf-gcc
 AS	:= $(TARGET_ARCH)-elf-as
 AR	:= $(TARGET_ARCH)-elf-ar
@@ -46,6 +53,7 @@ CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
 				   -Wundef -Wunreachable-code -Wunused-but-set-parameter \
 				   -Wwrite-strings -Wno-unused-function
 
+
 KERNEL_C_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.c' \))
 KERNEL_S_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.S' \))
 KERNEL_OBJS 	:= $(patsubst $(KERNEL_DIR)/%.c,$(KERNEL_BUILD_DIR)/%_c.o,$(KERNEL_C_SRC)) \
@@ -72,40 +80,33 @@ LINKER_SCRIPT		:= $(patsubst $(ARCH_DIR)/%.lds.S, \
 					   $(ARCH_BUILD_DIR)/%.lds, \
 					   $(LINKER_FULL_PATH))
 
-CFLAGS			:= -Iinclude -mcmodel=kernel -ffreestanding -std=c99 -nostdlib -Wa,-64 \
+CFLAGS			+= -Iinclude -mcmodel=kernel -ffreestanding -std=c99 -nostdlib -Wa,-64 \
 				   $(ARCH_FLAGS) $(CWARNINGS)
-LDFLAGS			:= -T $(LINKER_SCRIPT) -nostdlib -ffreestanding -static \
+LDFLAGS			+= -T $(LINKER_SCRIPT) -nostdlib -ffreestanding -static \
 				   -no-pie $(ARCH_FLAGS) -lgcc
 
 MIN_GRUB_FILE	:= $(PROJ_ROOT)/utils/boot/minimal-mb2-grub.cfg
+# just in case I want somethign different
 DEBUG_GRUB_FILE := $(PROJ_ROOT)/utils/boot/debug-mb2-grub.cfg
 GRUB_FILE		:= $(SYSROOT)/boot/grub/grub.cfg
 
 # TODO: Instead of using grub-mkrescue use grub-mkstandalone
-kernel: info-build clean-sysroot $(GRUB_FILE) $(SYSROOT)/boot/kernel.elf
+kernel: info clean-sysroot $(GRUB_FILE)-min $(SYSROOT)/boot/kernel.elf
 	@echo "Generating ISO..."
 	@mkdir -p $(SYSROOT)
 	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(SYSROOT)
 
 # kernel.elf never removed so it should actually work in base for. 
-kernel-debug: info-debug clean-sysroot $(BUILD_DIR)/kernel.elf debug-grub-cp
+kernel-debug: info clean-sysroot $(GRUB_FILE)-debug $(SYSROOT)/boot/kernel.elf
 	@echo "Generating ISO..."
-	@mkdir -p $(BUILD_DIR) 
-	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(BUILD_DIR)/sysroot
+	@mkdir -p $(SYSROOT) 
+	@grub-mkrescue -o $(BUILD_DIR)/$@.iso $(SYSROOT)
 
 clean-sysroot:
 	@echo "Cleaning sysroot..."
 	@rm -rf $(SYSROOT)/*
 
-info-debug:
-	@echo "Target Architecture:	$(TARGET_NICKNAME)"
-	@echo "C Compiler:			$(CC)"
-	@echo "Project Root:		$(PROJ_ROOT)"	
-	@echo "Build Directory:		$(BUILD_DIR)"
-	@echo "Grub Cfg:			$(DEBUG_GRUB_FILE)"
-	@echo
-
-info-build:
+info:
 	@echo "Target Architecture:	$(TARGET_NICKNAME)"
 	@echo "C Compiler:			$(CC)"
 	@echo "Project Root:		$(PROJ_ROOT)"	
@@ -113,17 +114,17 @@ info-build:
 	@echo "Grub Cfg:			$(MIN_GRUB_FILE)"
 	@echo
 
-$(GRUB_FILE): $(MIN_GRUB_FILE)
+$(GRUB_FILE)-min: $(MIN_GRUB_FILE)
 	@echo "Copying over grub config..."
 	@mkdir -p $(dir $@)
 	@touch $(MIN_GRUB_FILE)
-	@cp $< $@
+	@cp $< $(GRUB_FILE)
 
-debug-grub-cp: $(DEBUG_GRUB_FILE)
+$(GRUB_FILE)-debug: $(DEBUG_GRUB_FILE)
 	@echo "Copying over debug grub config..."
-	@mkdir -p $(SYSROOT)/boot/grub
+	@mkdir -p $(dir $@)
 	@touch $(GRUB_FILE)
-	@cp $(DEBUG_GRUB_FILE) $(GRUB_FILE)
+	@cp $< $(GRUB_FILE)
 
 # $(SYSROOT)/boot/camix.bin: $(BUILD_DIR)/kernel.elf
 # 	@mkdir -p $(dir $@)

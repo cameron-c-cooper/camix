@@ -57,8 +57,15 @@ indirect_target:
 	/* TODO: Macro out the 32 bit and 64 bit from each other */
 _start:
 	cli
+
+	mov %eax, %esi
+	mov %ebx, %ebp
+
 	mov $stack_top, %esp
 	call check_cpuid
+
+	pushl %eax
+	pushl %ebx
 
 	mov $CPUID_EXTENSIONS, %eax
 	cpuid
@@ -195,6 +202,19 @@ LM_Entrance:
 	mov $(VGA_TEXT_BUFFER_SIZE >> 3), %rcx
 	rep stosq
 
+	mov %rsi, %rdi
+	mov %rbp, %rsi
+	
+	/* x86_64 System V ABI defines rdi and rsi for first two params */
+	/*
+	mov %rax, %rdi
+	mov %rbx, %rsi
+	*/
+
+	/* 
+		For now, do not zero out the frame pointer. It can help carry
+	   	the multiboot2 information inside of it.
+	*/
 	mov $stack_top, %rsp
 	/* zero out the frame pointer, we need new call stack root */
 	xor %rbp, %rbp
