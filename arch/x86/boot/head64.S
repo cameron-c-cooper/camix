@@ -15,7 +15,18 @@ multiboot2_header_start:
 	.long multiboot2_header_end - multiboot2_header_start
 	.long -(0xe85250d6 + 0 + (multiboot2_header_end - multiboot2_header_start))
 	/* TODO: Add multiboot tags for extra information/stuff from grub */
+	/*
+	.align 8
 
+	.short 5
+	.short 0
+	.long 20
+	.long 0
+	.long 0
+	.long 0
+
+	.align 8
+	*/
 	.short 0 
 	.short 0
 	.long 8

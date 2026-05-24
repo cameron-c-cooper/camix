@@ -48,10 +48,12 @@ CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
 				   -Waggregate-return -Wbad-function-cast -Wcast-align \
 				   -Wcast-qual -Wfloat-equal -Wformat=2 -Wlogical-op \
 				   -Wmissing-declarations -Wmissing-include-dirs \
-				   -Wnested-externs -Wpointer-arith -Wredundant-decls \
+				   -Wnested-externs -Wredundant-decls -Wno-cast-qual\
 				   -Wsequence-point -Wshadow -Wstrict-prototypes -Wswitch \
 				   -Wundef -Wunreachable-code -Wunused-but-set-parameter \
-				   -Wwrite-strings -Wno-unused-function
+				   -Wwrite-strings -Wno-unused-function -Wno-pointer-arith \
+				   -Wno-pointer-to-int-cast -Wno-discarded-qualifiers
+
 
 
 KERNEL_C_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.c' \))
