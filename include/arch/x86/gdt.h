@@ -17,7 +17,8 @@ gdt_entry_t create_gdt_entry(
 		uint64_t flags
 );
 
-void init_gdt(uintptr_t kernel_rsp);
+extern void reload_gdt(void);
+void init_gdt(void);
 void load_gdt(struct gdtr *gdtr);
 
 #define GDT_HWSWITCH_FLAG (1 << 52)

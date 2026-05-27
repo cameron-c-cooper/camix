@@ -5,4 +5,6 @@
 
 extern virt_addr_t _data_end;
 
+void init_pmm(void);
+
 #endif

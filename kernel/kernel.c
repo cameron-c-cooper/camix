@@ -1,6 +1,7 @@
-#include "ds/list.h"
+#include <camix/init.h>
 #include <arch/x86/mm.h>
 #include <camix/multiboot2.h>
+#include <arch/x86/gdt.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <camix/vga.h>
@@ -87,7 +88,9 @@ void kmain(unsigned long magic, unsigned long addr) {
 						if (mmap -> type != MULTIBOOT_MEMORY_AVAILABLE) {
 							continue;
 						}
-						
+						// TODO: Create a static list in pmm of available memory.
+						// Figure out if it is usable and not overwriting kernel.
+						// From there, we can know more about mem allocs.
 					}
 
 
@@ -192,6 +195,8 @@ void kmain(unsigned long magic, unsigned long addr) {
 			+ ((tag -> size + 7) & ~7));
 	printf("total mbi size 0x%x\n", (unsigned) tag - addr);
 	printf("Finished parsing mb2 tags\n");
+	init();
+	printf("Initialized GDT");
 fail:
 	for (;;) __asm__ volatile ("hlt");
 }
