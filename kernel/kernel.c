@@ -1,3 +1,4 @@
+#include "ds/list.h"
 #include <arch/x86/mm.h>
 #include <camix/multiboot2.h>
 #include <stdint.h>
@@ -12,7 +13,6 @@
 static int xpos;
 static int ypos;
 static volatile unsigned char *video;
-
 
 void kmain(unsigned long magic, unsigned long addr);
 void kmain(unsigned long magic, unsigned long addr) {
@@ -76,6 +76,7 @@ void kmain(unsigned long magic, unsigned long addr) {
 							mmap = (multiboot_memory_map_t *)
 								((unsigned long) mmap
 								 +((struct multiboot_tag_mmap *) tag) -> entry_size))
+					{
 						printf(" base_addr = 0x%x%x,"
 							   " length = 0x%x%x, type = 0x%x\n",
 							   (unsigned) (mmap -> addr >> 32),
@@ -83,10 +84,20 @@ void kmain(unsigned long magic, unsigned long addr) {
 							   (unsigned) (mmap -> len >> 32),
 							   (unsigned) (mmap -> len & 0xffffffff),
 							   (unsigned) mmap -> type);
+						if (mmap -> type != MULTIBOOT_MEMORY_AVAILABLE) {
+							continue;
+						}
+						
+					}
+
+
+					//check if memory is being used by the kernel
+					//
 				}
 				break;
 			case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
 				{
+					/*
 					multiboot_uint32_t color;
 					unsigned i;
 					struct multiboot_tag_framebuffer *tagfb
@@ -171,6 +182,8 @@ void kmain(unsigned long magic, unsigned long addr) {
 								break;
 						}
 				}
+				*/
+				printf("Framebuffer detected\n");
 				break;
 			}
 		}

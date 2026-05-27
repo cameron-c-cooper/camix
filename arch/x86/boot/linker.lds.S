@@ -43,16 +43,16 @@ SECTIONS {
 		*(.rodata)
 		_rodata_end = .;
 	}
-	.data ALIGN(4K) : AT(ADDR(.data) - KERNEL_VMA) {
-		_data_start = .;
-		*(.data .data.*)
-		_rodata_end = .;
-	}
 	.bss ALIGN(4K) : AT(ADDR(.bss) - KERNEL_VMA) {
 		_bss_start = .;
 		*(COMMON)
 		*(.bss)
-		_rodata_end = .;
+		_bss_end = .;
+	}
+	.data ALIGN(4K) : AT(ADDR(.data) - KERNEL_VMA) {
+		_data_start = .;
+		*(.data .data.*)
+		_data_end = .;
 	}
 	_kernel_end = .;
 }
