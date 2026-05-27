@@ -15,7 +15,18 @@ multiboot2_header_start:
 	.long multiboot2_header_end - multiboot2_header_start
 	.long -(0xe85250d6 + 0 + (multiboot2_header_end - multiboot2_header_start))
 	/* TODO: Add multiboot tags for extra information/stuff from grub */
+	/*
+	.align 8
 
+	.short 5
+	.short 0
+	.long 20
+	.long 0
+	.long 0
+	.long 0
+
+	.align 8
+	*/
 	.short 0 
 	.short 0
 	.long 8
@@ -57,8 +68,15 @@ indirect_target:
 	/* TODO: Macro out the 32 bit and 64 bit from each other */
 _start:
 	cli
+
+	mov %eax, %esi
+	mov %ebx, %ebp
+
 	mov $stack_top, %esp
 	call check_cpuid
+
+	pushl %eax
+	pushl %ebx
 
 	mov $CPUID_EXTENSIONS, %eax
 	cpuid
@@ -195,6 +213,19 @@ LM_Entrance:
 	mov $(VGA_TEXT_BUFFER_SIZE >> 3), %rcx
 	rep stosq
 
+	mov %rsi, %rdi
+	mov %rbp, %rsi
+	
+	/* x86_64 System V ABI defines rdi and rsi for first two params */
+	/*
+	mov %rax, %rdi
+	mov %rbx, %rsi
+	*/
+
+	/* 
+		For now, do not zero out the frame pointer. It can help carry
+	   	the multiboot2 information inside of it.
+	*/
 	mov $stack_top, %rsp
 	/* zero out the frame pointer, we need new call stack root */
 	xor %rbp, %rbp

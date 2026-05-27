@@ -13,6 +13,7 @@ ENTRY(_start)
 SECTIONS {
 	. = KERNEL_LMA;
 	_kernel_start = .;
+	_bootstrap_start = .;
 	.multiboot.header : {
 		KEEP(*(.multiboot.header))
 	}
@@ -28,21 +29,30 @@ SECTIONS {
 	.boot_gdt : {
 		*(.boot_gdt) 
 	}
+	_bootstrap_end = .;
 
 	. += KERNEL_VMA;
 
 	.text ALIGN(4K) : AT(ADDR(.text) - KERNEL_VMA) {
+		_text_start = .;
 		*(.text)
+		_text_end = .;
 	}
 	.rodata ALIGN(4K) : AT(ADDR(.rodata) - KERNEL_VMA) {
+		_rodata_start = .;
 		*(.rodata)
-	}
-	.data ALIGN(4K) : AT(ADDR(.data) - KERNEL_VMA) {
-		*(.data .data.*)
+		_rodata_end = .;
 	}
 	.bss ALIGN(4K) : AT(ADDR(.bss) - KERNEL_VMA) {
+		_bss_start = .;
 		*(COMMON)
 		*(.bss)
+		_bss_end = .;
+	}
+	.data ALIGN(4K) : AT(ADDR(.data) - KERNEL_VMA) {
+		_data_start = .;
+		*(.data .data.*)
+		_data_end = .;
 	}
 	_kernel_end = .;
 }
