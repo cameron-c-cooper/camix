@@ -1,5 +1,5 @@
-#ifndef _ARCH_X86_CPU_H
-#define _ARCH_X86_CPU_H
+#ifndef X86_CPU_H
+#define X86_CPU_H
 
 #include <stdint.h>
 

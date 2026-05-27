@@ -4,6 +4,7 @@ obj-y += cpu/isr.o
 obj-y += cpu/idt.o
 obj-y += cpu/gdt.o
 obj-y += cpu/reload_gdt.o
+obj-y += cpu/cpuid.o
 obj-y += init.o
 # obj-$(CONFIG_BITS_64) += mm/paging64.o
 
