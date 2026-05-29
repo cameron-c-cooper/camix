@@ -25,10 +25,12 @@ READELF := $(TARGET_ARCH)-elf-readelf
 ifeq ($(TARGET_ARCH), i686)
 	TARGET_NICKNAME := x86
 	CONFIG_FILE := $(PROJ_ROOT)/configs/x86.config
+	CONFIG_X86 = y
 else ifeq ($(TARGET_ARCH), x86_64)
 	TARGET_NICKNAME := x86
 	CONFIG_FILE := $(PROJ_ROOT)/configs/x86_64.config
 	ARCH_FLAGS := -mno-red-zone -mno-mmx -mno-sse -mno-sse2
+	CONFIG_X86_64 = y
 else
 	TARGET_NICKNAME := $(TARGET_ARCH)
 	CONFIG_FILE := $(PROJ_ROOT)/configs/$(TARGET_ARCH).config

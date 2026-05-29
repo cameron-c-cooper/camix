@@ -61,7 +61,7 @@ isr_stub_table:
 	.quad isr_stub_11
 	.quad isr_stub_12
 	.quad isr_stub_13
-	.quad isr_stub_14
+	.quad page_fault_handler
 	.quad isr_stub_15
 	.quad isr_stub_16
 	.quad isr_stub_17
@@ -79,3 +79,18 @@ isr_stub_table:
 	.quad isr_stub_29
 	.quad isr_stub_30
 	.quad isr_stub_31
+
+page_fault_msg: .asciz "PAGE FAULT\n"
+
+.section .text
+.global page_fault_handler
+page_fault_handler:
+	cli
+	lea page_fault_msg(%rip), %rdi
+	xor %rax, %rax
+	call printf
+
+1:
+	hlt
+	jmp 1b
+

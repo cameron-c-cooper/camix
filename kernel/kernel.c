@@ -2,6 +2,7 @@
 #include <arch/x86/mm.h>
 #include <camix/multiboot2.h>
 #include <arch/x86/gdt.h>
+#include <camix/types.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <camix/vga.h>
@@ -196,7 +197,10 @@ void kmain(unsigned long magic, unsigned long addr) {
 	printf("total mbi size 0x%x\n", (unsigned) tag - addr);
 	printf("Finished parsing mb2 tags\n");
 	init();
-	printf("Initialized GDT");
+	printf("Initialized GDT\n");
+	printf("Intentionally causing page fault\n");
+	u8 *ptr = (u8 *) 0xdeadbeef;
+	printf("%d", *ptr++);
 fail:
 	for (;;) __asm__ volatile ("hlt");
 }
