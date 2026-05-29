@@ -254,7 +254,21 @@ void putchar(int c) {
 newline:
 		xpos = 0;
 		ypos++;
-		if (ypos >= ROWS) ypos = 0;
+		if (ypos >= ROWS) {
+			for (int i = 1; i < ROWS; i++) {
+				for (int j = 0; j < COLS; j++) {
+					*(video + (j + (i - 1) * COLS) * 2)
+						= *(video + (j + i * COLS) * 2);
+					*(video + (j + (i - 1) * COLS) * 2 + 1)
+						= *(video + (j + i * COLS) * 2 + 1);
+				}
+			}
+			for (int j = 0; j < COLS; j++) {
+				*(video + (j + (ROWS - 1) * COLS) * 2) = 0; 
+				*(video + (j + (ROWS - 1) * COLS) * 2 + 1) = 0; 
+			}
+			ypos--;
+		}
 		return;
 	}
 	*(video + (xpos + ypos * COLS) * 2) = c & 0xff;

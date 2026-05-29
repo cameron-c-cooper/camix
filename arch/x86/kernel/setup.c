@@ -10,5 +10,5 @@ void init(void) {
 	init_idt();
 	char vendor[12+1];
 	cpuid_get_vendor(vendor);
-	printf("%s", vendor);
+	printf("%s\n", vendor);
 }
