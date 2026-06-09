@@ -1,6 +1,7 @@
 #include <camix/init.h>
 #include <arch/x86/mm.h>
 #include <camix/multiboot2.h>
+#include <camix/pmm.h>
 #include <arch/x86/gdt.h>
 #include <camix/types.h>
 #include <stdint.h>
@@ -11,7 +12,10 @@
 #define ROWS 24
 #define ATTR 0x0f
 #define VIDEO P2V(0xb8000)
+#define MAX_MODULES 16
 
+static struct save_modules modules[MAX_MODULES];
+static int module_count = 0;
 static int xpos;
 static int ypos;
 static volatile unsigned char *video;
@@ -33,6 +37,23 @@ void kmain(unsigned long magic, unsigned long addr) {
 	}
 	size = *(unsigned *) addr;
 	printf("Announced mbi size 0x%x\n", size);
+	u64 max_addr = 0;
+	for (tag = (struct multiboot_tag *)(addr + 8);
+		tag->type != MULTIBOOT_TAG_TYPE_END;
+		tag = (struct multiboot_tag *)((multiboot_uint8_t *)tag + ((tag->size + 7) & ~7))) {
+    	if (tag->type != MULTIBOOT_TAG_TYPE_MMAP) continue;
+
+		multiboot_memory_map_t *mmap;
+		for (mmap = ((struct multiboot_tag_mmap *)tag)->entries;
+			 (multiboot_uint8_t *)mmap < (multiboot_uint8_t *)tag + tag->size;
+			 mmap = (multiboot_memory_map_t *)((unsigned long)mmap +
+					((struct multiboot_tag_mmap *)tag)->entry_size))
+		{
+			uint64_t end = mmap->addr + mmap->len;
+			if (end > max_addr) max_addr = end;
+		}
+	}
+	init_pmm(max_addr);
 	for (tag = (struct multiboot_tag *) (addr + 8);
 			// Accessing this pointer causes a page fault. Needs to be
 			// mapped to memory. Let us assume that this address is 
@@ -56,6 +77,14 @@ void kmain(unsigned long magic, unsigned long addr) {
 						((struct multiboot_tag_module *) tag) -> mod_start,
 						((struct multiboot_tag_module *) tag) -> mod_end,
 						((struct multiboot_tag_module *) tag) -> cmdline);
+				if (module_count < MAX_MODULES) {
+					modules[module_count].start = 
+						((struct multiboot_tag_module *) tag) -> mod_start;
+					modules[module_count].end = 
+						((struct multiboot_tag_module *) tag) -> mod_end;
+
+					module_count++;
+				}
 				break;
 			case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
 				printf("mem_lower = %uKB, mem_upper = %uKB\n",
@@ -89,6 +118,7 @@ void kmain(unsigned long magic, unsigned long addr) {
 						if (mmap -> type != MULTIBOOT_MEMORY_AVAILABLE) {
 							continue;
 						}
+						pmm_add_region(mmap -> addr, mmap -> len);
 						// TODO: Create a static list in pmm of available memory.
 						// Figure out if it is usable and not overwriting kernel.
 						// From there, we can know more about mem allocs.
@@ -192,10 +222,12 @@ void kmain(unsigned long magic, unsigned long addr) {
 			}
 		}
 	}
+	pmm_finalize(V2P(addr), size, modules, module_count);
 	tag = (struct multiboot_tag *) ((multiboot_uint8_t *) tag
 			+ ((tag -> size + 7) & ~7));
 	printf("total mbi size 0x%x\n", (unsigned) tag - addr);
 	printf("Finished parsing mb2 tags\n");
+
 	init();
 	printf("Initialized GDT\n");
 	printf("Intentionally causing page fault\n");

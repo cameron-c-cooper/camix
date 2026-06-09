@@ -141,7 +141,7 @@ $(SYSROOT)/boot/kernel.elf: $(BUILD_DIR)/kernel.elf
 $(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT) $(BUILD_DIR)/libk.a
 	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(OBJS) $(LDFLAGS) -o $@ -L$(BUILD_DIR)/libk.a
+	$(CC) $(OBJS) -L$(BUILD_DIR)/ -lk $(LDFLAGS) -o $@
 
 $(ARCH_BUILD_DIR)/%.o: $(ARCH_DIR)/%.c
 	@echo "Compiling $@..."

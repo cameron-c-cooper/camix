@@ -8,5 +8,6 @@ obj-y += kernel/cpu/cpuid.o
 obj-y += kernel/setup.o
 # obj-y += kernel/interrupts.o
 # obj-$(CONFIG_BITS_64) += mm/paging64.o
+obj-$(CONFIG_BITS_64) += mm/pmm64.o
 
 LINKER_SCRIPT_SRC	:= boot/linker.lds.S
