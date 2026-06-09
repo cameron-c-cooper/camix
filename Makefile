@@ -84,7 +84,7 @@ LINKER_SCRIPT		:= $(patsubst $(ARCH_DIR)/%.lds.S, \
 					   $(ARCH_BUILD_DIR)/%.lds, \
 					   $(LINKER_FULL_PATH))
 
-CFLAGS			+= -Iinclude -mcmodel=kernel -ffreestanding -std=c99 -nostdlib -Wa,-64 \
+CFLAGS			+= -Iinclude/libc -Iinclude -mcmodel=kernel -ffreestanding -std=c99 -nostdlib -Wa,-64 \
 				   $(ARCH_FLAGS) $(CWARNINGS)
 LDFLAGS			+= -T $(LINKER_SCRIPT) -nostdlib -ffreestanding -static \
 				   -no-pie $(ARCH_FLAGS) -lgcc
