@@ -2,7 +2,7 @@
 
 .extern main
 
-section .text
+.section .text
 _start:
 #ifdef CONFIG_BITS_32
 #else

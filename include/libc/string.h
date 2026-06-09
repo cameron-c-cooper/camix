@@ -4,7 +4,9 @@
 #include <stddef.h>
 #include <camix/types.h>
 
+#ifndef NULL
 #define NULL ((void *) 0)
+#endif
 
 void *memset(void *str, int c, size_t bytes);
 void *memcpy(void *dst, const void *src, size_t bytes);

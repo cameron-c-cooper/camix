@@ -44,6 +44,7 @@ DRIVERS_DIR			:= $(PROJ_ROOT)/drivers
 DRIVERS_BUILD_DIR	:= $(BUILD_DIR)/drivers
 ARCH_DIR			:= $(PROJ_ROOT)/arch/$(TARGET_NICKNAME)
 ARCH_BUILD_DIR		:= $(BUILD_DIR)/arch/$(TARGET_NICKNAME)
+LIB_DIR				:= $(PROJ_ROOT)/lib
 
 # The Poor Man's Static Analyzer
 CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
@@ -63,10 +64,10 @@ KERNEL_S_SRC 	:= $(shell find $(KERNEL_DIR) -type f \( -name '*.S' \))
 KERNEL_OBJS 	:= $(patsubst $(KERNEL_DIR)/%.c,$(KERNEL_BUILD_DIR)/%_c.o,$(KERNEL_C_SRC)) \
 				   $(patsubst $(KERNEL_DIR)/%.S,$(KERNEL_BUILD_DIR)/%_s.o,$(KERNEL_S_SRC))
 
-DRIVERS_C_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.c' \))
-DRIVERS_S_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.S' \))
-DRIVERS_OBJS 	:= $(patsubst $(DRIVERS_DIR)/%.c,$(DRIVERS_BUILD_DIR)/%_c.o,$(DRIVERS_C_SRC)) \
-				   $(patsubst $(DRIVERS_DIR)/%.S,$(DRIVERS_BUILD_DIR)/%_s.o,$(DRIVERS_S_SRC))
+# DRIVERS_C_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.c' \))
+# DRIVERS_S_SRC 	:= $(shell find $(DRIVERS_DIR) -type f \( -name '*.S' \))
+# DRIVERS_OBJS 	:= $(patsubst $(DRIVERS_DIR)/%.c,$(DRIVERS_BUILD_DIR)/%_c.o,$(DRIVERS_C_SRC)) \
+# 				   $(patsubst $(DRIVERS_DIR)/%.S,$(DRIVERS_BUILD_DIR)/%_s.o,$(DRIVERS_S_SRC))
 
 include $(ARCH_DIR)/config.mk
 
@@ -76,7 +77,7 @@ ARCH_SRCS := $(foreach obj, $(obj-y), $(if $(\
 				$(ARCH_DIR)/$(obj:.o=.c), \
 				$(ARCH_DIR)/$(obj:.o=.S)))
 
-OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS) $(DRIVERS_OBJS)
+OBJS 	:= $(KERNEL_OBJS) $(ARCH_OBJS)
 #
 # Technically because the CPP runs over it, it should live in the build dir
 LINKER_FULL_PATH	:= $(ARCH_DIR)/$(LINKER_SCRIPT_SRC)
@@ -84,7 +85,7 @@ LINKER_SCRIPT		:= $(patsubst $(ARCH_DIR)/%.lds.S, \
 					   $(ARCH_BUILD_DIR)/%.lds, \
 					   $(LINKER_FULL_PATH))
 
-CFLAGS			+= -Iinclude/libc -Iinclude -mcmodel=kernel -ffreestanding -std=c99 -nostdlib -Wa,-64 \
+CFLAGS			+= -Iinclude/libc -Iinclude -mcmodel=kernel -ffreestanding -std=gnu11 -nostdlib -Wa,-64 \
 				   $(ARCH_FLAGS) $(CWARNINGS)
 LDFLAGS			+= -T $(LINKER_SCRIPT) -nostdlib -ffreestanding -static \
 				   -no-pie $(ARCH_FLAGS) -lgcc
@@ -137,10 +138,10 @@ $(GRUB_FILE)-debug: $(DEBUG_GRUB_FILE)
 $(SYSROOT)/boot/kernel.elf: $(BUILD_DIR)/kernel.elf
 	@cp $< $@
 
-$(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT)
+$(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT) $(BUILD_DIR)/libk.a
 	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	@$(CC) $(OBJS) $(LDFLAGS) -o $@ 
+	@$(CC) $(OBJS) $(LDFLAGS) -o $@ -L$(BUILD_DIR)/libk.a
 
 $(ARCH_BUILD_DIR)/%.o: $(ARCH_DIR)/%.c
 	@echo "Compiling $@..."
@@ -176,3 +177,9 @@ $(LINKER_SCRIPT): $(LINKER_FULL_PATH)
 	@echo "Preprocessing linker script..."
 	@mkdir -p $(dir $@)
 	@$(CC) -E -P -x c -I$(PROJ_ROOT)/include $< -o $@
+
+$(BUILD_DIR)/libk.a: $(LIB_DIR)
+	@echo "Building libk..."
+	@$(MAKE) -C $(LIB_DIR)
+	-@ln -sf $(LIB_DIR)/build/libk.a $(BUILD_DIR)/libk.a
+
