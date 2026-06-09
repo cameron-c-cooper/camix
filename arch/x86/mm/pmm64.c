@@ -74,3 +74,19 @@ void pmm_finalize(
 			
 	pmm_mark_used(0, PAGE_SIZE);
 }
+virt_addr_t pmm_alloc_page(void) {
+	for (u64 i = 0; i < pmm_bitmap_size; i++) {
+		if (pmm_bitmap[i] == ~0ULL) continue; // skip word
+		int bit = __builtin_ctzll(~pmm_bitmap[i]);
+		u64 page = (i << 6) + bit;
+		if (page >= pmm_total_pages) return 0;
+		pmm_bitmap[i] |= (1 << bit);
+		return page * PAGE_SIZE;
+	}
+	return 0;
+}
+
+void pmm_free_page(phys_addr_t phys_addr) {
+	u64 page = phys_addr / PAGE_SIZE;
+	pmm_bitmap[page >> 6] &= ~(1 << (page % 64));
+}

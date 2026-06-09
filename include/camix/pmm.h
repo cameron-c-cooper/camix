@@ -21,5 +21,7 @@ void pmm_finalize(
 		int module_count
 );
 void pmm_mark_used(u64 base, u64 len);
+virt_addr_t pmm_alloc_page(void);
+void pmm_free_page(phys_addr_t phys_addr);
 
 #endif
