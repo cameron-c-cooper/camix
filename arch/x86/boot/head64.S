@@ -226,7 +226,7 @@ LM_Entrance:
 		For now, do not zero out the frame pointer. It can help carry
 	   	the multiboot2 information inside of it.
 	*/
-	mov $stack_top, %rsp
+	mov $(stack_top + KERNEL_VMA), %rsp
 	/* zero out the frame pointer, we need new call stack root */
 	xor %rbp, %rbp
 

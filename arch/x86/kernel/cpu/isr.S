@@ -2,15 +2,62 @@
 
 #define __isr_err_stub(x) \
 isr_stub_##x: \
-	call exception_handler; \
-	iretq
+	pushq $##x;\
+	jmp isr_common;\
 
 #define __isr_no_err_stub(x) \
 isr_stub_##x: \
-	call exception_handler; \
-	iretq
+	pushq $0;\
+	pushq $##x;\
+	jmp isr_common
+
+#define __irq_stub(x) \
+irq_stub_##x: \
+	pushq $0; \
+	pushq $##x;\
+	jmp isr_common
 
 .extern exception_handler
+
+isr_common:
+    pushq %rax
+    pushq %rbx
+    pushq %rcx
+    pushq %rdx
+    pushq %rsi
+    pushq %rdi
+    pushq %rbp
+    pushq %r8
+    pushq %r9
+    pushq %r10
+    pushq %r11
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+
+	movq %rsp, %rdi # pass pointer to stack frame as first arg
+	call exception_handler
+
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %r11
+    popq %r10
+    popq %r9
+    popq %r8
+    popq %rbp
+    popq %rdi
+    popq %rsi
+    popq %rdx
+    popq %rcx
+    popq %rbx
+    popq %rax
+	addq $16, %rsp
+
+	iretq
+
 __isr_no_err_stub(0)
 __isr_no_err_stub(1)
 __isr_no_err_stub(2)
@@ -43,6 +90,7 @@ __isr_no_err_stub(28)
 __isr_no_err_stub(29)
 __isr_err_stub(30)
 __isr_no_err_stub(31)
+__irq_stub(32)
 
 .section .rodata
 .global isr_stub_table
@@ -61,7 +109,7 @@ isr_stub_table:
 	.quad isr_stub_11
 	.quad isr_stub_12
 	.quad isr_stub_13
-	.quad page_fault_handler
+	.quad isr_stub_14
 	.quad isr_stub_15
 	.quad isr_stub_16
 	.quad isr_stub_17
@@ -79,18 +127,4 @@ isr_stub_table:
 	.quad isr_stub_29
 	.quad isr_stub_30
 	.quad isr_stub_31
-
-page_fault_msg: .asciz "PAGE FAULT\n"
-
-.section .text
-.global page_fault_handler
-page_fault_handler:
-	cli
-	lea page_fault_msg(%rip), %rdi
-	xor %rax, %rax
-	call printf
-
-1:
-	hlt
-	jmp 1b
-
+	.quad irq_stub_32

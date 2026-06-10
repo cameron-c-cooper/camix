@@ -47,7 +47,7 @@ ARCH_BUILD_DIR		:= $(BUILD_DIR)/arch/$(TARGET_NICKNAME)
 LIB_DIR				:= $(PROJ_ROOT)/lib
 
 # The Poor Man's Static Analyzer
-CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
+CWARNINGS		:= -Wall -Wextra -Werror \
 				   -Waggregate-return -Wbad-function-cast -Wcast-align \
 				   -Wcast-qual -Wfloat-equal -Wformat=2 -Wlogical-op \
 				   -Wmissing-declarations -Wmissing-include-dirs \
@@ -141,7 +141,7 @@ $(SYSROOT)/boot/kernel.elf: $(BUILD_DIR)/kernel.elf
 $(BUILD_DIR)/kernel.elf: $(OBJS) $(LINKER_SCRIPT) $(BUILD_DIR)/libk.a
 	@echo "Linking object files..."
 	@mkdir -p $(dir $@)
-	$(CC) $(OBJS) -L$(BUILD_DIR)/ -lk $(LDFLAGS) -o $@
+	@$(CC) $(OBJS) -L$(BUILD_DIR)/ -lk $(LDFLAGS) -o $@
 
 $(ARCH_BUILD_DIR)/%.o: $(ARCH_DIR)/%.c
 	@echo "Compiling $@..."

@@ -13,6 +13,16 @@ static inline u8 inb(u16 port) {
 	return ret;
 }
 
-static inline void io_wait(void
+struct registers_t {
+	u64 r15, r14, r13, r12, r11, r10, r9, r8;
+	u64 rbp, rdi, rsi, rdx, rcx, rbx, rax;
+	u64 int_no;
+	u64 err_code;
+	u64 rip, cs, rflags, rsp, ss;
+};
+
+static inline void io_wait(void) {
+	outb(0x80, 0);
+}
 
 #endif

@@ -5,10 +5,13 @@
 
 extern void printf(const char *fmt, ...);
 
-void init(void) {
+void early_init(void) {
 	init_gdt();
-	init_idt();
 	char vendor[12+1];
 	cpuid_get_vendor(vendor);
 	printf("%s\n", vendor);
+}
+
+void late_init(void) {
+	init_idt();
 }

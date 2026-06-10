@@ -53,6 +53,7 @@ void kmain(unsigned long magic, unsigned long addr) {
 			if (end > max_addr) max_addr = end;
 		}
 	}
+	early_init();
 	init_pmm(max_addr);
 	for (tag = (struct multiboot_tag *) (addr + 8);
 			// Accessing this pointer causes a page fault. Needs to be
@@ -223,12 +224,12 @@ void kmain(unsigned long magic, unsigned long addr) {
 		}
 	}
 	pmm_finalize(V2P(addr), size, modules, module_count);
+	late_init();
 	tag = (struct multiboot_tag *) ((multiboot_uint8_t *) tag
 			+ ((tag -> size + 7) & ~7));
 	printf("total mbi size 0x%x\n", (unsigned) tag - addr);
 	printf("Finished parsing mb2 tags\n");
 
-	init();
 	printf("Initialized GDT\n");
 	printf("Intentionally causing page fault\n");
 	u8 *ptr = (u8 *) 0xdeadbeef;

@@ -1,5 +1,7 @@
 LIB_ROOT	:= $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 
+DEBUG := y
+
 include $(LIB_ROOT)/../config.mk
 
 ifeq ($(TARGET_ARCH), i686)
@@ -42,6 +44,10 @@ CWARNINGS		:= -Wall -Wextra -Wpedantic -pedantic-errors -Werror \
 
 CFLAGS	:= $(CFLAGS) $(CWARNINGS) -I$(LIB_ROOT)/../include \
 		   -I$(LIB_ROOT)/../include/libc -ffreestanding -nostdlib
+
+ifeq ($(DEBUG), y)
+	CFLAGS += -g
+endif
 
 LIBK_CFLAGS := $(CFLAGS)
 

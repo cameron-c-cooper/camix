@@ -1,6 +1,8 @@
 #include <camix/types.h>
 #include <camix/pmm.h>
 #include <arch/x86/pmm.h>
+#include <camix/vmm.h>
+#include <arch/x86/vmm.h>
 #include <string.h>
 
 /*
@@ -15,6 +17,8 @@
  *
  *
  */
+#define EARLY_BITMAP_WORDS 512
+static u64 early_bitmap[EARLY_BITMAP_WORDS];
 
 static u64 *pmm_bitmap;
 static u64 pmm_bitmap_size;
@@ -25,18 +29,28 @@ static void pmm_mark_free(u64 base, u64 len);
 extern u8 _kernel_end[];
 extern u8 _kernel_start[];
 
+extern void printf(const char *format, ...);
+
 void init_pmm(phys_addr_t max_phys_addr) {
 	pmm_total_pages = max_phys_addr / PAGE_SIZE;
 	pmm_bitmap_size = (pmm_total_pages + 63) / 64;
-	pmm_bitmap = (u64 *) ALIGN_UP((u64) _kernel_end);
+	if (pmm_bitmap_size > EARLY_BITMAP_WORDS) {
+		pmm_bitmap_size = EARLY_BITMAP_WORDS;
+		pmm_total_pages = EARLY_BITMAP_WORDS * 64;
+	}
+	// pmm_bitmap = (u64 *) ALIGN_UP((u64) _kernel_end);
+	pmm_bitmap = early_bitmap;
+	// printf("bitmap at 0x%x\n", pmm_bitmap);
+	// printf("_kernel_end = 0x%x\n", _kernel_end);
 	memset(pmm_bitmap, 0xff, pmm_bitmap_size * 8);
+	pmm_mark_used(kvirt_to_phys((u64) pmm_bitmap), pmm_bitmap_size * 8);
 }
 
 static void pmm_mark_free(u64 base, u64 len) {
 	u64 page = ALIGN_UP(base) / PAGE_SIZE;
 	u64 page_end = ALIGN_DOWN(base + len) / PAGE_SIZE;
 	for (u64 p = page; p < page_end; p++) {
-		pmm_bitmap[p >> 6] &= ~(1 << (p % 64));
+		pmm_bitmap[p >> 6] &= ~(1ULL << (p % 64));
 	}
 }
 
@@ -44,7 +58,7 @@ void pmm_mark_used(u64 base, u64 len) {
 	u64 page = ALIGN_DOWN(base) / PAGE_SIZE;
 	u64 page_end = ALIGN_UP(base + len) / PAGE_SIZE;
 	for (u64 p = page; p < page_end; p++) {
-		pmm_bitmap[p >> 6] |= (1 << (p % 64));
+		pmm_bitmap[p >> 6] |= (1ULL << (p % 64));
 	}
 }
 
@@ -58,14 +72,10 @@ void pmm_finalize(
 		int module_count
 ) {
 	pmm_mark_used(
-			(u64) _kernel_start,
+			kvirt_to_phys((u64) _kernel_start),
 			(u64) _kernel_end - (u64) _kernel_start);
 
 	pmm_mark_used(mb2_addr, mb2_size);
-
-	pmm_mark_used(
-			(u64) pmm_bitmap,
-			pmm_bitmap_size * 8);
 
 	for (int i = 0; i < module_count; i++) {
 		pmm_mark_used(modules[i].start,
@@ -74,13 +84,14 @@ void pmm_finalize(
 			
 	pmm_mark_used(0, PAGE_SIZE);
 }
-virt_addr_t pmm_alloc_page(void) {
+
+phys_addr_t pmm_alloc_page(void) {
 	for (u64 i = 0; i < pmm_bitmap_size; i++) {
 		if (pmm_bitmap[i] == ~0ULL) continue; // skip word
 		int bit = __builtin_ctzll(~pmm_bitmap[i]);
 		u64 page = (i << 6) + bit;
 		if (page >= pmm_total_pages) return 0;
-		pmm_bitmap[i] |= (1 << bit);
+		pmm_bitmap[i] |= (1ULL<< bit);
 		return page * PAGE_SIZE;
 	}
 	return 0;
@@ -88,5 +99,5 @@ virt_addr_t pmm_alloc_page(void) {
 
 void pmm_free_page(phys_addr_t phys_addr) {
 	u64 page = phys_addr / PAGE_SIZE;
-	pmm_bitmap[page >> 6] &= ~(1 << (page % 64));
+	pmm_bitmap[page >> 6] &= ~(1ULL << (page % 64));
 }
