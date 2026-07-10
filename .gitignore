@@ -6,3 +6,8 @@
 *.o
 *.a
 /lib/build
+
+
+# Added by cargo
+
+/target
