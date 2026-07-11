@@ -4,7 +4,7 @@ use std::process::Command;
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let boot_asm = PathBuf::from("src/boot/boot.asm");
+    let boot_asm = PathBuf::from("src/x86/boot/boot.asm");
     let boot_obj = out_dir.join("boot.o");
     let status = Command::new("nasm")
         .args(["-f", "elf64"])

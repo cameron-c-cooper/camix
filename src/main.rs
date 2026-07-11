@@ -3,18 +3,24 @@
 
 use core::panic::PanicInfo;
 
+use crate::io::outb;
+
 mod io;
 mod uart;
+mod x86;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(_multiboot_info_addr: usize) -> ! {
     uart::init();
+    // uart is established as the serial connection
     println!("kernel says hello!");
+    unsafe { outb(0xf4, 0x00) };
     loop { unsafe { core::arch::asm!("hlt") } }
 }
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("PANIC: {}", info);
+    unsafe { outb(0xf4, 0x00) }; // qemu shutdown
     loop { unsafe { core::arch::asm!("hlt") } }
 }
