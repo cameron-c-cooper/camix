@@ -15,7 +15,7 @@ macro_rules! log {
 #[macro_export]
 macro_rules! info {
     ($fmt:expr $(, $arg:expr)*) => {
-        $crate::println!(concat!("[INFO] \t", $fmt) $(, $arg)*);
+        $crate::println!(concat!("[INFO] \t\t", $fmt) $(, $arg)*);
     };
 }
 
