@@ -12,10 +12,9 @@ pub struct TaskStateSegment {
 }
 
 bitfield! {
-    #[derive(Clone, Copy, PartialEq, Eq, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[repr(transparent)]
     pub struct SegmentDescriptor(u64);
-    impl Debug;
 
     pub limit_low, set_limit_low: 15, 0;
     pub limit_high, set_limit_high: 51, 48;
@@ -38,10 +37,9 @@ bitfield! {
 }
 
 bitfield! {
-    #[derive(Clone, Copy, PartialEq, Eq, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[repr(C, align(8))]
     pub struct SystemSegmentDescriptor(u128);
-    impl Debug;
 
     pub limit_low, set_limit_low: 15, 0;
     pub base_low, set_base_low: 39, 16;
@@ -123,17 +121,30 @@ impl SystemSegmentDescriptor {
 const GDT_ENTRIES: usize = 7;
 
 #[repr(C, align(8))]
+#[derive(Debug)]
 pub struct Gdt([u64; GDT_ENTRIES]);
 
 pub const NULL_SEL: u16 = 0;
-pub const KERNEL_CS: u16 = 1 * 8;
+pub const KERNEL_CS: u16 = 8;
 pub const KERNEL_DS: u16 = 2 * 8;
 pub const USER_CS: u16 = 3 * 8;
 pub const USER_DS: u16 = 4 * 8;
 pub const TSS_SEL: u16 = 5 * 8;
 
+// lowkey horrendous
+#[allow(clippy::unnecessary_cast)]
+#[unsafe(no_mangle)]
+pub static mut GDT: Gdt = unsafe { core::mem::transmute([0 as u64; GDT_ENTRIES]) };
+
+#[allow(clippy::unnecessary_cast)]
+#[unsafe(no_mangle)]
+pub static mut TSS: TaskStateSegment = unsafe { 
+    // i love this bullshit
+    core::mem::transmute([0; core::mem::size_of::<TaskStateSegment>()/4]) 
+};
+
 impl Gdt {
-    pub fn new(tss: &'static TaskStateSegment) -> Self {
+    pub fn new(tss: *const TaskStateSegment) -> Self {
         let mut kcode = SegmentDescriptor::default();
         kcode.set_present(true);
         kcode.set_descriptor_type(true);
@@ -191,7 +202,16 @@ struct DescriptorTablePointer {
     base: u64
 }
 
-pub fn load_gdt(gdt: &'static Gdt) {
+pub fn init() {
+    unsafe {
+        TSS = TaskStateSegment::new();
+        GDT = Gdt::new(&raw const TSS);
+        load_gdt(&raw const GDT);
+    }
+}
+
+// that static ref is killing me.
+pub fn load_gdt(gdt: *const Gdt) {
     let ptr = DescriptorTablePointer {
         limit: (core::mem::size_of::<Gdt>() - 1) as u16,
         base: gdt as *const _ as u64,
@@ -200,7 +220,7 @@ pub fn load_gdt(gdt: &'static Gdt) {
     unsafe {
         core::arch::asm!("lgdt [{}]", in(reg) &ptr);
         core::arch::asm!(
-            "mov ax, {sel:x}", "mov ds, ax", "moves, ax",
+            "mov ax, {sel:x}", "mov ds, ax", "mov es, ax",
             "mov ss, ax", "mov fs, ax", "mov gs, ax",
             sel = in(reg) KERNEL_DS,
         );

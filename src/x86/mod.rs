@@ -1,1 +1,1 @@
-mod gdt;
+pub mod gdt;
