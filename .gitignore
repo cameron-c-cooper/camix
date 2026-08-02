@@ -7,6 +7,7 @@
 *.a
 /lib/build
 /isodir
+/camix.iso
 
 
 # Added by cargo
