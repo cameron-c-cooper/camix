@@ -8,12 +8,13 @@ use crate::io::outb;
 mod io;
 mod uart;
 mod x86;
+mod logging;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(_multiboot_info_addr: usize) -> ! {
     uart::init();
-    // uart is established as the serial connection
-    println!("kernel says hello!");
+    info!("KERNEL INIT");
+
     unsafe { outb(0xf4, 0x00) };
     loop { unsafe { core::arch::asm!("hlt") } }
 }
