@@ -9,6 +9,7 @@ mod io;
 mod uart;
 mod x86;
 mod logging;
+mod multiboot2;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(_multiboot_info_addr: usize) -> ! {
